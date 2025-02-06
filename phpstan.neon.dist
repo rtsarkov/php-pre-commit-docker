@@ -1,0 +1,11 @@
+includes:
+    # Раскомментировать если используется
+    - phpstan-base
+parameters:
+	level: 6
+	paths:
+		- src
+		- tests
+	excludePaths:
+	reportUnmatchedIgnoredErrors: false
+	ignoreErrors:
