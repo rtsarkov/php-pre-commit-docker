@@ -1,6 +1,8 @@
-# Pre-Commit для Автоматической Проверки PHP-Кода
+Настройка Pre-Commit для Автоматической Проверки PHP-Кода
 
-Если pre-commit еще не установлен в ОС, установите его командой:
+Для поддержания качества кода и соблюдения стандартов в проекте можно настроить хуки pre-commit. Они автоматически проверяют и исправляют код перед каждым коммитом. Вот как это настроить для phpcs, phpstan и PHP CS Fixer, используя Docker и конфигурацию pre-commit.
+
+Если pre-commit еще не установлен, установите его командой:
 
 ```bash
 pip install pre-commit
@@ -9,25 +11,136 @@ brew install pre-commit
 или
 sudo apt install pre-commit
 ```
+Создайте в корне проекта директорию .pre-commit(лучше что бы исключить его их гита, локально или глобально для всего гита на компьютере). Затем создайте файл .pre-commit-config.yaml в корне и добавьте следующие хуки:
 
-Установите хуки командой:
-```bash
-pre-commit install
+```yaml
+repos:  
+  - repo: local  
+    hooks:
+      - id: Hooks start  
+		name: Hooks start  
+		entry: bash -c 'echo "Hooks start"'  
+		language: system
+		
+      - id: php-cs-fixer  
+        name: PHP CS Fixer  
+        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app cytopia/php-cs-fixer fix "$1" --rules=@PSR12'  
+        language: system  
+        types: [ php ]  
+        files: ^(app|src)/.*\.php$  
+        args: [ "{}" ]  
+  
+      - id: phpcs  
+        name: PHP CodeSniffer  
+        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app cytopia/phpcs --standard=PSR12 "$1"'  
+        language: system  
+        types: [ php ]  
+        files: ^(app|src)/.*\.php$  
+        args: [ "{}" ]  
+  
+      - id: php-lint  
+        name: PHP Lint  
+        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app php:cli php -l "$1"'  
+        language: system  
+        types: [php]  
+        files: ^(app|src)/.*\.php$  
+        args: ["{}"]  
+  
+	   - id: phpstan  
+        name: PHPStan  
+#        Создаст файл base-line в который запишет все текущие ошибки которые будут в дальнейщем проигнорированы  
+#        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/phpstan/phpstan analyse -c .pre-commit/phpstan.neon "$1" --generate-baseline .pre-commit/phpstan-baseline.neon'  
+#        Если нужно сразу начать анализ без создания base-line файла  
+        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/phpstan/phpstan analyse -c .pre-commit/phpstan.neon "$1"'  
+        language: system  
+        types: [php]  
+        files: ^(app|src)/.*\.php$  
+        args: ["{}"]  
+  
+      - id: psalm  
+        name: Psalm  
+	        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/webfactory/psalm:5.24.0 --show-info=true  --config=.pre-commit/psalm.xml --no-cache  "$1"'  
+        language: system  
+        types: [ php ]  
+        files: ^(app|src)/.*\.php$  
+        args: [ "{}" ]
+
 ```
-
-Создайте в корне проекта директорию .pre-commit(лучше что бы исключить его их гита, локально или глобально для всего гита на компьютере).
-И клонируейте репозиторий в неё. Конфиг расчитан именно на такой вариант.
-Если вам хочется вы можете поправить директорию.
-
-Так как мы создали отдельную директорию под наш pre-commit,  необходимо открыть файл .git/hooks/pre-commit, необходимо поправить подключение файл 
-`.pre-commit-config.yaml`
-
 Если вам необходимо прогонять определеную папку проекта, то это можно изменить вот в этих местах файла
 files: ^(app|src)/.*\.php
 
-Файл pre-commit включает в себя следующие инструменты
 -   PHP CS Fixer: Автоматически исправляет стиль кода перед проверкой стандартов.
 -   PHP CodeSniffer: Проверяет код на соответствие стандарту PSR-12 после исправлений.
 -   PHPStan: Выполняет статический анализ, используя базовое состояние (baseline), чтобы игнорировать ранее зафиксированные ошибки.
 -   PHP Lint: Проверка синтаксиса для предотвращения грубых ошибок.
 -  Psalm: Выполняет статический анализ кода.
+Оставить можно любой этап или отредактировать его.
+Если вам на какой то момент нужно выключить все шаги, можно закоментировать всё и оставить такое
+```yaml
+repos:  
+  - repo: local  
+    hooks:
+		- id: Hooks start  
+		  name: Hooks start  
+		  entry: bash -c 'echo Hooks start"'  
+		  language: system
+```
+
+Установите хуки командой:
+```bash
+pre-commit install
+```
+Так как мы создали отдельную директорию под наш pre-commit,  необходимо открыть файл .git/hooks/pre-commit, необходимо поправить подключение файл  `.pre-commit-config.yaml`
+
+Теперь, перед каждым коммитом, pre-commit автоматически выполнит проверку вашего PHP-кода. Это помогает поддерживать чистоту и соответствие стандартам вашего проекта!
+
+### PhpStan
+Для phpstan можно воспользоваться следующем базовым файлом конфигурации.
+
+Немного пояснений. Если вы будете использовать baseline в своем проекте, первый запуск необходимо выполнить раскоментить соответствующую строку и закоментить строку без генерации этого файла.
+
+Файл basleline будет полезным если у вас уже есть много написанного кода и вы поставили phpstan в уже существующий проект. 
+Данный файл зафиксирует все имеющиеся ошибки в файл и будет прокускать их в дальнейшем.
+Так же необходимо раскоменнтировать соответствующее подключение этого файл в конфигурации.
+**phpstan.neon**
+```neon
+includes: 
+	# Раскомментировать если используется
+    #- phpstan-baseline.neon  
+parameters:  
+    level: 6  
+  
+    paths:  
+       - src  
+       - tests  
+    excludePaths:  
+    reportUnmatchedIgnoredErrors: false  
+	ignoreErrors:
+```
+### Psalm
+Для psalm вы можете использовать следующий базовый конфиг
+**psalm.xml**
+```xml
+<?xml version="1.0"?>  
+<psalm  
+        errorLevel="2"  
+        findUnusedVariablesAndParams="true"  
+        resolveFromConfigFile="true"  
+        useDocblockPropertyTypes="true"  
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+        xmlns="https://getpsalm.org/schema/config"  
+        xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"  
+>  
+    <projectFiles>
+		<directory name="../app" />  
+        <ignoreFiles>
+	        <directory name="../vendor" />  
+        </ignoreFiles>
+    </projectFiles>
+    <forbiddenFunctions>
+	    <function name="dd"/>  
+        <function name="dump"/>  
+        <function name="eval"/>  
+        <function name="print_r"/>  
+    </forbiddenFunctions></psalm>
+```
