@@ -11,61 +11,7 @@ brew install pre-commit
 или
 sudo apt install pre-commit
 ```
-Создайте в корне проекта директорию .pre-commit(лучше что бы исключить его их гита, локально или глобально для всего гита на компьютере). Затем создайте файл .pre-commit-config.yaml в корне и добавьте следующие хуки:
-
-```yaml
-repos:  
-  - repo: local  
-    hooks:
-      - id: Hooks start  
-		name: Hooks start  
-		entry: bash -c 'echo "Hooks start"'  
-		language: system
-		
-      - id: php-cs-fixer  
-        name: PHP CS Fixer  
-        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app cytopia/php-cs-fixer fix "$1" --rules=@PSR12'  
-        language: system  
-        types: [ php ]  
-        files: ^(app|src)/.*\.php$  
-        args: [ "{}" ]  
-  
-      - id: phpcs  
-        name: PHP CodeSniffer  
-        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app cytopia/phpcs --standard=PSR12 "$1"'  
-        language: system  
-        types: [ php ]  
-        files: ^(app|src)/.*\.php$  
-        args: [ "{}" ]  
-  
-      - id: php-lint  
-        name: PHP Lint  
-        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app php:cli php -l "$1"'  
-        language: system  
-        types: [php]  
-        files: ^(app|src)/.*\.php$  
-        args: ["{}"]  
-  
-	   - id: phpstan  
-        name: PHPStan  
-#        Создаст файл base-line в который запишет все текущие ошибки которые будут в дальнейщем проигнорированы  
-#        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/phpstan/phpstan analyse -c .pre-commit/phpstan.neon "$1" --generate-baseline .pre-commit/phpstan-baseline.neon'  
-#        Если нужно сразу начать анализ без создания base-line файла  
-        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/phpstan/phpstan analyse -c .pre-commit/phpstan.neon "$1"'  
-        language: system  
-        types: [php]  
-        files: ^(app|src)/.*\.php$  
-        args: ["{}"]  
-  
-      - id: psalm  
-        name: Psalm  
-	        entry: bash -c 'docker run --rm -v "$(pwd):/app" -w /app ghcr.io/webfactory/psalm:5.24.0 --show-info=true  --config=.pre-commit/psalm.xml --no-cache  "$1"'  
-        language: system  
-        types: [ php ]  
-        files: ^(app|src)/.*\.php$  
-        args: [ "{}" ]
-
-```
+Создайте в корне проекта директорию .pre-commit(лучше что бы исключить его их гита, локально или глобально для всего гита на компьютере). Склонировать туда проект.
 Если вам необходимо прогонять определеную папку проекта, то это можно изменить вот в этих местах файла
 files: ^(app|src)/.*\.php
 
